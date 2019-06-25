@@ -1,0 +1,165 @@
+---
+title: "Data PreProcessing"
+author: "Anna Lizarov"
+date: "June 19, 2019"
+output: html_document
+---
+
+# Libraries
+```{r}
+library(dplyr)
+library(tidyr)
+library(stringr)
+```
+
+# Datasets
+```{r}
+# Quiz 1
+q1 <- read.csv("HUDK 5053 Online Class Activity Quiz 1_June 18, 2019_16.39.csv", header=TRUE, na.strings = "")
+# Quiz 2
+q2 <- read.csv("HUDK 5053 Online Class Activity Quiz 2_June 18, 2019_16.47.csv", header=TRUE, na.strings = "")
+# Quiz 3
+q3 <- read.csv("HUDK 5053 Online Class Activity Quiz 3_June 18, 2019_16.48.csv", header=TRUE, na.strings = "")
+# Quiz 4
+q4 <- read.csv("HUDK 5053 Online Class Activity Quiz 4_June 18, 2019_16.40.csv", header=TRUE, na.strings = "")
+```
+
+# Clean up
+```{r}
+q.list = list(q1,q2,q3,q4)
+q <-lapply(q.list, function(x){
+  x <- x[-(1:2),]
+  x <- select(x, -c(StartDate,EndDate, Status, IPAddress, ResponseId, LocationLatitude, LocationLongitude, DistributionChannel, RecordedDate, ExternalReference, RecipientLastName, RecipientFirstName, RecipientEmail))
+  return(x)
+  })
+# save dfs to csv with similar lapply-call:
+n <- 1:length(q)
+lapply(n, function(ni) {
+               write.csv(file = paste("Quiz_", ni, ".csv", sep = ""), 
+               q[ni], row.names = F)
+               }
+       )
+```
+
+# Recoding the first quiz
+```{r}
+Q1 = read.csv("Quiz_1.csv", header=TRUE, na.strings = "")
+```
+
+## Recoding the variables
+```{r}
+Q1$Q1 = as.character(Q1$Q1)
+Q1$Q1[Q1$Q1 == "Xt2213"] = "xt2213"
+Q1$Q1Q6 = ifelse(Q1$Q1Q6 == "Yes", 1,0)
+Q1 <- select(Q1, -c(Q2, Q3))
+```
+
+# Recoding the second quiz 
+```{r}
+Q2 = read.csv("Quiz_2.csv", header=TRUE, na.strings = "")
+```
+
+## Recoding the variables
+```{r}
+Q2$Q2Q4 = ifelse(Q2$Q2Q4 == "For pronunciation and distinguishing words", 1, 0)
+Q2$Q2Q5 = ifelse(Q2$Q2Q5 == "33", 1, 0)
+Q2$Q2Q6 = ifelse(Q2$Q2Q6 == "Modifies the pronunciation of the preceding consonant by making it soft", 1, 0)
+Q2$Q2Q7 = ifelse(Q2$Q2Q7 == "Whether the noun is singular or plural and its gender", 1, 0)
+```
+
+## Recalculating the scores
+```{r}
+Q2$Q2Score = rowSums(Q2[,(8:11)], na.rm=TRUE)
+Q2$Q2Alphabet = rowSums(Q2[,(9:10)], na.rm=TRUE)
+Q2$Q2IntrotoRussian = rowSums(Q2[,c(8:9,11)], na.rm=TRUE)
+Q2$Q2PersonalPronounsPoss = Q2[,11]
+Q2 <- select(Q2, -c(SC0, SC1,SC2,SC3, Q2,Q3))
+```
+
+## Calculating the percentages
+```{r}
+Q2 <- Q2 %>% mutate(Q2Score_pct =(Q2Score/4)*100, Q2Alphabet_pct = (Q2Alphabet/2)*100, Q2IntrotoRussian_pct = (Q2IntrotoRussian/3)*100,Q2PersonalPronounsPoss_pct=(Q2PersonalPronounsPoss*100)) 
+```
+
+# Recoding the third quiz
+```{r}
+Q3 = read.csv("Quiz_3.csv", header=TRUE, na.strings = "")
+```
+
+## Recoding the variables
+```{r}
+Q3$Q3Q4 = gsub(".*\\[", "", Q3$Q3Q4)
+Q3$Q3Q4 = ifelse(Q3$Q3Q4 == "vi]", 1,0)
+```
+
+## Recalculating the scores
+```{r}
+Q3$Q3Score = Q3$Q3Q4
+Q3$Q3Greetings = Q3$Q3Q4
+Q3$Q3PersonalPronounsPoss = Q3$Q3Q4
+Q3 <- select(Q3, -c(SC0, SC1,SC2,Q2,Q3))
+```
+
+## Calculating the percentages
+```{r}
+Q3 <- Q3 %>% mutate(Q3Score_pct = Q3$Q3Score*100, Q3Greetings_pct = Q3Greetings*100, Q3PersonalPronounsPoss_pct = Q3PersonalPronounsPoss*100 )
+```
+
+# Recoding the fourth quiz
+```{r}
+Q4 = read.csv("Quiz_4.csv", header=TRUE, na.strings = "")
+Q4
+```
+
+## Recoding the variables
+```{r}
+Q4$Q4Q4 = ifelse(Q4$Q4Q4 == "TRUE", 1, 0)
+Q4$Q4Q5 = ifelse(Q4$Q4Q5 == "FALSE", 1, 0)
+Q4$Q4Q6 = ifelse(Q4$Q4Q6 == "TRUE", 1, 0)
+Q4$Q4Q7 = ifelse(Q4$Q4Q7 == "FALSE", 1, 0)
+Q4$Q4Q8 = ifelse(Q4$Q4Q8 == "TRUE", 1, 0)
+Q4$Q4Q9 = gsub(".*\\[", "", Q4$Q4Q9)
+Q4$Q4Q9 = ifelse(Q4$Q4Q9 == "leto]", 1,0)
+Q4$Q4Q10 = ifelse(Q4$Q4Q10 == "Yes", 1, 0)
+Q4$Q4Q11 = ifelse(Q4$Q4Q11 == "Yes", 1, 0)
+Q4$Q4Q12 = ifelse(Q4$Q4Q12 == "Yes", 1,ifelse(Q4$Q4Q12 == "Maybe", 2, 0))
+Q4$Q4Q14 = ifelse(Q4$Q4Q14 == "Yes", 1, 0)
+```
+
+## Recalculating the scores
+```{r}
+Q4$Q4Score = rowSums(Q4[,(8:13)])
+Q4$Q4Alphabet = Q4$Q4Q5
+Q4$Q4Greetings = Q4$Q4Q7
+Q4$Q4IntrotoRussian = rowSums(Q4[, c(8,11,12)])
+Q4$Q4PersonalPronounsPoss = Q4$Q4Q6
+Q4$Q4Calendar = rowSums(Q4[,(12:13)])
+```
+
+## Calculating the percentages
+```{r}
+Q4 <- Q4 %>% mutate(Q4Score_pct = (Q4Score/6)*100,Q4Alphabet_pct=Q4Alphabet*100, Q4Greetings_pct = Q4Greetings*100, Q4IntrotoRussian_pct=(Q4IntrotoRussian/3)*100, Q4PersonalPronounsPoss_pct = Q4PersonalPronounsPoss*100, Q4Calendar_pct = (Q4Calendar/2)*100)
+Q4 <- select(Q4, -c(SC0, SC1,SC2,SC3,SC4, Q2,Q3))
+```
+
+# Saving as CSV files
+```{r}
+Q.list = list(Q1,Q2,Q3,Q4)
+# save dfs to csv with similar lapply-call:
+n <- 1:length(Q.list)
+lapply(n, function(ni) {
+               write.csv(file = paste("Quiz_", ni, "_(processed)", ".csv", sep = ""), 
+               Q.list[ni], row.names = F)
+               }
+       )
+```
+
+# Unifying all of the dataframes into one
+```{r}
+Q <- merge(Q1,Q2, by = "Q1", all=TRUE)
+Q <- merge(Q,Q3, by = "Q1", all=TRUE)
+Q <-merge(Q,Q4, by= "Q1", all=TRUE)
+# write CSV
+write.csv(Q, file = "Full_Quiz_Dataset.csv")
+```
+
