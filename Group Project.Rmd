@@ -1,0 +1,202 @@
+---
+title: "Group Project"
+author: "Sihan Wang"
+date: "6/25/2019"
+output: html_document
+---
+#Datasets
+```{r}
+q1 = read.csv("Quiz_1_(processed).csv", header = TRUE)
+lx<-data.frame("0","N/A","N/A","EN","lx2241","Chinese","N/A","N/A","N/A","N/A","Chinese","0")
+merge(q1,lx)
+q1 <- rbind(q1, lx)
+q2 = read.csv("Quiz_2_(processed).csv", header = TRUE)
+q3 = read.csv("Quiz_3_(processed).csv", header = TRUE)
+q4 = read.csv("Quiz_4_(processed).csv", header = TRUE)
+df = read.csv("Full_Quiz_Dataset.csv", header = TRUE)
+
+df_1<-merge(x=q2,y=q3,by="Q1")
+df_2<-merge(x=df1,y=q4,by="Q1")
+colnames(df)[colnames(df)=="Q1"] <- "ID"
+```
+
+
+# 1. Number of questions correct across students & across time
+```{r}
+library(dplyr)
+library(tidyr)
+library(stringr)
+library(ggplot2)
+
+# Number of questions correct across students
+N = select(df,ID, Q2Score, Q3Score, Q4Score)
+row.names(N) <- NULL
+N <- na.omit(N)
+
+# Time
+T = select(df,ID,Duration..in.seconds..y,Duration..in.seconds..x.1,Duration..in.seconds..y.1)
+colnames(T)[2:4] <- c("Q2Time", "Q3Time","Q4Time")
+
+# merge two chart
+df2<-merge(x=T,y=N,by="ID")
+df2[is.na(df2)] = 0
+df2$i <- seq.int(nrow(df2))
+
+#Time & Number taken for individual student
+# point graph
+ggplot(na.omit(df2))+
+  labs(title="Number of correct for each student vs time", x = "Question N", y = "Time (seconds)")+
+  geom_point(aes(x= df2$Q2Score, 
+                y= df2$Q2Time, 
+                group=2), color = "red",  size = 3) +
+  geom_point(aes(x= df2$Q3Score, 
+                y=df2$Q3Time, 
+                group=2), color = "green", size = 3) +
+  geom_point(aes(x=df2$Q4Score, 
+                y=df2$Q4Time, 
+                group=2), color = "blue", size = 3)
+#line graph
+ggplot(na.omit(df2))+
+  labs(title="Number of correct for each student vs time", x = "Question N", y = "Time (seconds)")+
+  geom_line(aes(x= df2$Q2Score, 
+                y= df2$Q2Time, 
+                group=2), color = "red", size = 3) +
+  geom_line(aes(x= df2$Q3Score, 
+                y=df2$Q3Time, 
+                group=2), color = "green", size = 3) +
+  geom_line(aes(x=df2$Q4Score, 
+                y=df2$Q4Time, 
+                group=2), color = "blue", size = 3)
+#For each quiz
+c2 = select(df2,ID, Q2Time, Q2Score)
+c3 = select(df2,ID, Q3Time, Q3Score)
+c4 = select(df2,ID, Q4Time, Q4Score)
+
+#Creating a single combined plot with your current data set up would look something like this
+g2 = ggplot() +
+  geom_point(data=c2, aes(x =Q2Time, y=Q2Score))+
+  labs(title="single combied plot Q2", x = "Time(seconds)", y = "Number of correct")+
+  geom_smooth(data=c2, aes(x=Q2Time, y=Q2Score), fill="blue",
+        colour= "darkblue", size=1) 
+g2
+g3 = ggplot()+
+  labs(title="single combied plot Q3", x = "Time(seconds)", y = "Number of correct")+
+  geom_point(data=c2, aes(x =Q2Time, y=Q2Score))+
+  geom_smooth(data=c2, aes(x=Q2Time, y=Q2Score), fill="red",
+        colour= "darkred", size=1)
+g3
+g4 = ggplot()+
+  labs(title="single combied plot Q4", x = "Time(seconds)", y = "Number of correct")+
+  geom_point(data=c4, aes(x=Q4Time, y=Q4Score))+
+  geom_smooth(data=c4, aes(x=Q4Time, y=Q4Score), fill="green",
+        colour= "darkgreen", size=1) 
+g4
+
+#combine the data sets
+g = ggplot() +
+   labs(title="Number of correct for each student vs time", x = "Time(seconds)", y = "Number of correct")+
+  geom_point(data=c2, aes(x =Q2Time, y=Q2Score))+
+  geom_smooth(data=c2, aes(x=Q2Time, y=Q2Score), fill="blue",
+        colour= "darkblue", size=1) +
+  geom_point(data=c3, aes(x =Q3Time, y=Q3Score))+
+  geom_smooth(data=c3, aes(x=Q3Time, y=Q3Score), fill="red",
+        colour= "darkred", size=1) +
+  geom_point(data=c4, aes(x=Q4Time, y=Q4Score))+
+  geom_smooth(data=c4, aes(x=Q4Time, y=Q4Score), fill="green",
+        colour= "darkgreen", size=1)
+g
+```
+
+# aggregate the inputted data.frame
+```{r}
+install.packages("VIM")
+library(VIM)
+aggr(N)
+aggr(T)
+
+#The dataset has no missing values. However, this might not always be the case with a Capstone Prject datasets and you will have to decide how you want to deal with these values. (Some popular methods include either deleting the particular row/column or replacing with a mean of the value.)
+# The first column is Q2Score, which mean the Number of questions correct by student. To be able to use these values, you need to separate them by student's name. 
+```
+
+#Clusters
+```{r}
+#Separate or mutate the Date/Time columns
+set.seed(20)
+clusters <- kmeans(df2[,2:6], 3)
+str(clusters)
+```
+
+
+
+#keans animation
+```{r}
+# scale dataset
+library(dplyr)
+glimpse(df2)
+summary(df2)
+df3 = df2%>%mutate(Q2T = scale(Q2Time),
+    Q3T = scale(Q3Time),
+    Q4T = scale(Q4Time),
+    Q2S = scale(Q2Score),
+    Q3S = scale(Q3Score),
+    Q4S = scale(Q4Score))%>%
+select(-c(Q2T,Q3T,Q4T,Q2S,Q3S,Q4S))
+# keans
+install.packages("animation")	
+library(animation)
+set.seed(2345)
+kmeans.ani(df3[2:7], 2) #Select the columns 2 and 3 of df3 and run the algorithm with k sets to 3. Plot the animation.
+```
+
+#each quiz
+```{r}
+#Quiz 2
+p2 = ggplot(na.omit(df2))+
+  labs(title="Quiz 2", x = "Time(seconds)", y = "Number of correct")+
+  geom_point(aes(Q2Time, Q2Score, colour = ID))
+p2
+#Quiz 3
+p3 = ggplot(na.omit(df2))+
+  labs(title="Quiz 3", x = "Time(seconds)", y = "Number of correct")+
+  geom_point(aes(Q3Time, Q3Score, colour = ID))
+p3
+#Quiz 4
+p4 = ggplot(na.omit(df2))+
+  labs(title="Quiz 2", x = "Time(seconds)", y = "Number of correct")+
+  geom_point(aes(Q4Time, Q4Score, colour = ID))
+p4
+
+#indivisual Q2
+p02 = ggplot(na.omit(df2), aes(Q2Time, Q2Score, colour = ID)) +
+  labs(title="indivisual Q2", x = "Time(seconds)", y = "Number of correct")+
+  geom_point()+ facet_wrap(~ ID, ncol = 2, scales = "free") +
+  guides(colour = "none") +
+  theme()
+p02
+#indivisual Q3
+p03 = ggplot(na.omit(df2), aes(Q3Time, Q3Score, colour = ID)) +
+  labs(title="indivisual Q3", x = "Time(seconds)", y = "Number of correct")+
+  geom_point()+ facet_wrap(~ ID, ncol = 2, scales = "free") +
+  guides(colour = "none") +
+  theme()
+p03
+#indivisual Q4
+p04 = ggplot(na.omit(df2), aes(Q4Time, Q4Score, colour = ID)) +
+  labs(title="indivisual Q4", x = "Time(seconds)", y = "Number of correct")+
+  geom_point()+ facet_wrap(~ ID, ncol = 2, scales = "free") +
+  guides(colour = "none") +
+  theme()
+p04
+
+```
+
+```{r}
+c2$group <- 1
+colnames(c2)[2:3] <- c("Time","Score")
+c3$group <- 2
+colnames(c3)[2:3] <- c("Time","Score")
+c4$group <- 3
+colnames(c4)[2:3] <- c("Time","Score")
+c234 <- cbind(c2,c3,c4)
+```
+
